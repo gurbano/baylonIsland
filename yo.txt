@@ -1,0 +1,1 @@
+https://github.com/awentzonline/generator-webapp-watchify
