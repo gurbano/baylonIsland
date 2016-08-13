@@ -10,6 +10,11 @@ function TestScenes() {
 			light0.diffuse = new BABYLON.Color3(1, 1, 1);
 			light0.specular = new BABYLON.Color3(1, 1, 1);
 			light0.groundColor = new BABYLON.Color3(0, 0, 0);
+
+			scene.clearColor = BABYLON.Color3.Blue();
+			scene.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+
+
 			return {
 				'light1' : light0
 			}
@@ -32,8 +37,8 @@ function TestScenes() {
 			var h = 1200;
 			var subdivisions = 120;
 			var ratio = 10;
-			var terrainMaterial = getTerrainMaterial(scene);
-			//terrainMaterial = getStandardMaterial(scene);
+			//var terrainMaterial = getTerrainMaterial(scene);
+			var terrainMaterial = getStandardMaterial(scene);
 			// Ground
 			var approxTo = function(x, to){ 
 				return  (parseInt(x)/to).toFixed(0) * to;
@@ -77,11 +82,9 @@ function TestScenes() {
 			//ground.position.y = -2.05;
 			ground.material = terrainMaterial;
 
-			var light0 = new BABYLON.PointLight("Omni0", new BABYLON.Vector3(1, 10, 1), scene);
+			/*var light0 = new BABYLON.PointLight("Omni0", new BABYLON.Vector3(1, 10, 1), scene);
 			light0.diffuse = new BABYLON.Color3(1, 0, 0);
 			light0.specular = new BABYLON.Color3(1, 1, 1);
-
-
 			window.onmousemove = function () {
 		        var pickResult = scene.pick(scene.pointerX, scene.pointerY);                    
 		        if(pickResult.pickedPoint){
@@ -91,37 +94,64 @@ function TestScenes() {
 
 		        }
 		    };			
+*/
 		},
 		'TREE1' : function (scene, ground) {
 			var name ="TREE1";
 			//Material declaration
 		    var woodMaterial = new BABYLON.StandardMaterial(name, scene);
-		    var woodTexture = new BABYLON.WoodProceduralTexture(name + "text", 512, scene);
-		    woodTexture.ampScale = 50;
-		    woodMaterial.diffuseTexture = woodTexture;
+		    woodMaterial.diffuseColor = new BABYLON.Color3(0.1, 0.3, 0);
 		    
 
 		   	var leafMaterial = new BABYLON.StandardMaterial("leafMaterial", scene);
   			leafMaterial.diffuseColor = new BABYLON.Color3(0.5, 1, 0.5);
+  			leafMaterial.specularPower = 1024;
 			
 			var treeMaterial = getStandardMaterial(scene);
 			//var trees = new BABYLON.Node(name, scene);
 			var _trees = {};
 			for (var i = 0; i < 300; i++) {				
 				//let tree = simplePineGenerator(4, 40, grassMaterial , grassMaterial, scene);
-				var tree = QuickTreeGenerator(
-					20, //radius of cappella 15-20
-					10, //height of trunk 10 to 15
-					2, // radius of trunk
-					woodMaterial,
-					leafMaterial, 
-					scene);
-				var n = name+i;				
-				_trees[n] = tree;
-				tree.position.x = random(-600, 600);
-				tree.position.z = random(-600, 600);
-				tree.position.y = ground.getHeightAtCoordinates2(tree.position.x, tree.position.z) ;
-				
+				var x = random(-600, 600);
+				var z = random(-600, 600);
+				var y = ground.getHeightAtCoordinates2(x, z) ;
+				if (y>12){
+					var tree = QuickTreeGenerator(
+						20, //radius of cappella 15-20
+						10, //height of trunk 10 to 15
+						2, // radius of trunk
+						woodMaterial,
+						leafMaterial, 
+						scene);
+					var n = name+i;				
+					_trees[n] = tree;
+					tree.position.x = x;
+					tree.position.z = z;
+					tree.position.y = y;
+					tree.parent = ground;
+				}
+				//tree.isPickable = true;				
+			}
+			return _trees;
+		},
+		'TREE2' : function (scene, opts) {
+			var ground = opts.ground;
+			var mesh = opts.treeMesh.loadedMeshes[1];
+			var name ="TREE2";
+
+			var _trees = {};
+			for (var i = 0; i < 300; i++) {				
+				var x = random(-600, 600);
+				var z = random(-600, 600);
+				var y = ground.getHeightAtCoordinates2(x, z) ;
+				if (y>12){
+					var tree = mesh.createInstance(name+'_'+i);
+					_trees[name+'_'+i] = tree;
+					tree.position.x = x;
+					tree.position.z = z;
+					tree.position.y = y;
+					tree.parent = ground;
+				}
 				//tree.isPickable = true;				
 			}
 			return _trees;
@@ -169,6 +199,21 @@ function TestScenes() {
 			gui.add(waterMesh.position, 'y',-10,10);	
 
 			return {'waterMesh': waterMesh, 'water': water, 'gui': gui};            
+		},
+		'OBJ1' : function(scene, ground, cb){
+		// The first parameter can be used to specify which mesh to import. Here we import all meshes
+			var loader = new BABYLON.AssetsManager(scene);
+			var bane = loader.addMeshTask("bane", "", "./images/objs/", "Lowpoly_tree_sample.obj");
+    		bane.onSuccess = function(mesh){
+    			console.info(mesh);
+    			cb(mesh);
+    		}
+    		bane.onError = function(err){
+    			console.error(err);
+    			cb(undefined);
+    		}
+    		loader.load();
+
 		}
 
 
@@ -180,20 +225,22 @@ module.exports = new TestScenes();
 var getTerrainMaterial = function (scene) {	
 	var terrainMaterial =  new BABYLON.TerrainMaterial("terrainMaterial", scene);
 	terrainMaterial.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-	terrainMaterial.specularPower = 16;	
+	terrainMaterial.specularPower = 128;	
 	// Set the mix texture (represents the RGB values)
 	terrainMaterial.mixTexture = new BABYLON.Texture("./images/textures/mixMap.png", scene);	
 	// Diffuse textures following the RGB values of the mix map
 	// diffuseTexture1: Red
 	// diffuseTexture2: Green
 	// diffuseTexture3: Blue
-	terrainMaterial.diffuseTexture1 = new BABYLON.Texture("./images/textures/floor.png", scene);
-	terrainMaterial.diffuseTexture2 = new BABYLON.Texture("./images/textures/rock.png", scene);
+	terrainMaterial.diffuseTexture0 = new BABYLON.Texture("./images/textures/floor.png", scene);
+	terrainMaterial.diffuseTexture1 = new BABYLON.Texture("./images/textures/rock.png", scene);	
+	terrainMaterial.diffuseTexture2 = new BABYLON.Texture("./images/textures/grass.png", scene);
 	terrainMaterial.diffuseTexture3 = new BABYLON.Texture("./images/textures/grass.png", scene);
-	
+
 	// Bump textures according to the previously set diffuse textures
-	terrainMaterial.bumpTexture1 = new BABYLON.Texture("./images/textures/floor_bump.png", scene);
-	terrainMaterial.bumpTexture2 = new BABYLON.Texture("./images/textures/rockn.png", scene);
+	terrainMaterial.bumpTexture0 = new BABYLON.Texture("./images/textures/floor_bump.png", scene);
+	terrainMaterial.bumpTexture1 = new BABYLON.Texture("./images/textures/rockn.png", scene);
+	terrainMaterial.bumpTexture2 = new BABYLON.Texture("./images/textures/grassn.png", scene);
 	terrainMaterial.bumpTexture3 = new BABYLON.Texture("./images/textures/grassn.png", scene);
 
 	// Rescale textures according to the terrain
@@ -207,9 +254,17 @@ var getTerrainMaterial = function (scene) {
 var getStandardMaterial = function (scene) {
 	var terrainMaterial = new BABYLON.StandardMaterial("texture1", scene)			
 	//terrainMaterial.wireframe = true;
-	terrainMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.5, 0.2);
-	terrainMaterial.specularColor = new BABYLON.Color3(1, 1, 1);
-	terrainMaterial.specularPower = 32;
+	var rossoScuro = new BABYLON.Color3(1, 0.2, 0.2);
+	var verdeScuro = new BABYLON.Color3(0.1, 0.3, 0);
+	terrainMaterial.diffuseColor = verdeScuro;
+	terrainMaterial.specularColor = rossoScuro;
+	terrainMaterial.specularPower = 2;
+	terrainMaterial.ambientColor = new BABYLON.Color3(0, 0, 0); 
+	terrainMaterial.emissiveColor = new BABYLON.Color3(0, 0, 0); 
+
+	
+
+	
 	return terrainMaterial;
 }
 
@@ -336,3 +391,5 @@ var QuickTreeGenerator = function QuickTreeGenerator(sizeBranch, sizeTrunk, radi
     return tree;
 
 };
+
+

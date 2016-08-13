@@ -44,7 +44,7 @@ module.exports = function (grunt) {
         tasks: ['wiredep']
       },
       js: {
-        files: ['<%= config.app %>/scripts/{,*/}*.js'],
+        files: ['<%= config.app %>/scripts/{,*/}*.js','<%= config.app %>/vendor/{,*/}*.js'],
         tasks: ['jshint'],
         options: {
           livereload: true
@@ -290,7 +290,15 @@ module.exports = function (grunt) {
     // Copies remaining files to places other tasks can use
     copy: {
       dist: {
-        files: [{
+        files: [
+        {
+          expand: true,
+          dot: true,
+          cwd: '<%= config.app %>/vendor',
+          src: '*.js',
+          dest: '<%= config.dist %>/vendor'
+        },
+        {
           expand: true,
           dot: true,
           cwd: '<%= config.app %>',
@@ -348,7 +356,7 @@ module.exports = function (grunt) {
       ],
       dist: [
         'copy:styles',
-        'imagemin',
+        //'imagemin',
         'svgmin'
       ]
     },

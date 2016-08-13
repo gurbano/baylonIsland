@@ -9,9 +9,11 @@ function App(div) {
 
 	sm.load('TST1');
 	sm.load('TERR1',{}, function (m) {
-		var trees = sm.load('TREE1', m['ground']);
 		var s = sm.load('SKYBOX1');
-		sm.load('WATER1', [s,m, trees]);
+		sm.load('OBJ1', {}, function (mesh) {
+			var trees = sm.load('TREE2', {ground: m['ground'], treeMesh: mesh});
+			sm.load('WATER1', [s,m,trees]);
+		});
 	});
 	
 
