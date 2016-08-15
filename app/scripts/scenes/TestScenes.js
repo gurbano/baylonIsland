@@ -4,6 +4,16 @@ var random = function (min, max) {
 }
 function TestScenes() {
 	return{
+		'PHYS' : function (scene, sceneManager) {
+			sceneManager.enablePhysics();
+			return {};
+		},
+		'AUDIO': function (scene, sceneManager) {
+			var OST = new Audio('./music/ost.mp3');
+			sceneManager.am.add('OST', OST);
+			//OST.play();
+			return {}
+		},
 		'TST1': function (scene) {
 			// create a basic light, aiming 0,1,0 - meaning, to the sky
 			var light0 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
@@ -14,6 +24,14 @@ function TestScenes() {
 			scene.clearColor = BABYLON.Color3.Blue();
 			scene.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
 
+			var gui = new dat.GUI();
+			
+			gui.add(light0, 'intensity',0,1, function(data, someother){
+				debugger;	
+			});
+			gui.add(light0.diffuse, 'r',0,1);
+			gui.add(light0.diffuse, 'g',0,1);
+			gui.add(light0.diffuse, 'b',0,1);
 
 			return {
 				'light1' : light0
@@ -35,8 +53,8 @@ function TestScenes() {
 			// Create terrain material
 			var w = 1200;
 			var h = 1200;
-			var subdivisions = 120;
-			var ratio = 10;
+			var subdivisions = 300;
+			var ratio = w/subdivisions;
 			//var terrainMaterial = getTerrainMaterial(scene);
 			var terrainMaterial = getStandardMaterial(scene);
 			// Ground
@@ -49,9 +67,9 @@ function TestScenes() {
 				0, //min height
 				100, //max height
 				scene, 
-				true,
+				false,
 				function (mesh) {
-					mesh.convertToFlatShadedMesh();
+					//mesh.convertToFlatShadedMesh();
 					var positions_array = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
 					var pos = {};
 					for (var i = 0; i < positions_array.length; i = i+3) {
@@ -62,39 +80,52 @@ function TestScenes() {
 						pos[x][z] = y;
 					}
 					mesh.pos = pos;
-					mesh.getHeightAtCoordinates2 = function (x,z) {
+					mesh.getHeightAtCoordinatesOld = mesh.getHeightAtCoordinates; 
+					mesh.getHeightAtCoordinates = function (x,z) {
 						x = Math.floor(parseInt(x)/ratio) * ratio;
 						z = Math.floor(parseInt(z)/ratio) * ratio;
-						/*
-						var p_x = (parseInt(x)+w/2);
-						var p_z = (parseInt(z)+h/2);
-						p_x = Math.floor(p_x/ratio);
-						p_z = Math.floor(p_z/ratio);var pos_in_array =  p_x +(subdivisions * p_z);
-						var height = mesh.positions_array[(pos_in_array *3) + 1];  
-						console.info('x' +x, 'z'+z, 'px'+mesh.positions_array[pos_in_array *3], 
-							'pz'+mesh.positions_array[(pos_in_array *3) +2], 'h'+height);
-						return height;
-						*/
-						return pos[x][z];
+						if (pos[x] && pos[x][z])
+							return pos[x][z];
+						else
+							return 0;
 					}
 					cb({'ground': ground});
 				});
-			//ground.position.y = -2.05;
 			ground.material = terrainMaterial;
-
-			/*var light0 = new BABYLON.PointLight("Omni0", new BABYLON.Vector3(1, 10, 1), scene);
-			light0.diffuse = new BABYLON.Color3(1, 0, 0);
-			light0.specular = new BABYLON.Color3(1, 1, 1);
+		},
+		'POINTER1' : function (scene, ground) {		
+			var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);	
+			var particleSystem = new BABYLON.ParticleSystem("particles", 2000, scene);
+			particleSystem.particleTexture = new BABYLON.Texture("./images/textures/flare.png", scene);
+			particleSystem.textureMask = new BABYLON.Color4(0.1, 0.8, 0.8, 1.0);
+			particleSystem.emitter = sphere;
+			particleSystem.minEmitBox = new BABYLON.Vector3(-1, 0, -1); // Starting all From
+  			particleSystem.maxEmitBox = new BABYLON.Vector3(1, 0, 1); // To...
+  			particleSystem.color1 = new BABYLON.Color4(0.7, 0.8, 1.0, 1.0);
+			particleSystem.color2 = new BABYLON.Color4(0.2, 0.5, 1.0, 1.0);
+			particleSystem.colorDead = new BABYLON.Color4(0, 0, 0.2, 0.0);
+			// Size of each particle (random between...)
+			particleSystem.minSize = 0.1;
+			particleSystem.maxSize = 0.5;
+			// Life time of each particle (random between...)
+			particleSystem.minLifeTime = 0.3;
+			particleSystem.maxLifeTime = 8.5;
+			particleSystem.emitRate = 5000;
+			particleSystem.direction1 = new BABYLON.Vector3(-7, 8, 3);
+			particleSystem.direction2 = new BABYLON.Vector3(7, 8, -3);
+			particleSystem.minAngularSpeed = 0;
+			particleSystem.maxAngularSpeed = Math.PI;
+			particleSystem.start();
 			window.onmousemove = function () {
 		        var pickResult = scene.pick(scene.pointerX, scene.pointerY);                    
 		        if(pickResult.pickedPoint){
-		        	light0.position.x = pickResult.pickedPoint.x;
-		        	light0.position.z = pickResult.pickedPoint.z;
-		        	light0.position.y = ground.getHeightAtCoordinates2(pickResult.pickedPoint.x, pickResult.pickedPoint.z);
-
+		        	var pos = {};
+		        	pos.x = pickResult.pickedPoint.x;
+		        	pos.z = pickResult.pickedPoint.z;
+		        	pos.y = ground.getHeightAtCoordinates(pickResult.pickedPoint.x, pickResult.pickedPoint.z) + 15;
+		        	sphere.position = pos;
 		        }
-		    };			
-*/
+		    };	
 		},
 		'TREE1' : function (scene, ground) {
 			var name ="TREE1";
@@ -105,7 +136,7 @@ function TestScenes() {
 
 		   	var leafMaterial = new BABYLON.StandardMaterial("leafMaterial", scene);
   			leafMaterial.diffuseColor = new BABYLON.Color3(0.5, 1, 0.5);
-  			leafMaterial.specularPower = 1024;
+  			leafMaterial.specularPower = 1;
 			
 			var treeMaterial = getStandardMaterial(scene);
 			//var trees = new BABYLON.Node(name, scene);
@@ -114,7 +145,7 @@ function TestScenes() {
 				//let tree = simplePineGenerator(4, 40, grassMaterial , grassMaterial, scene);
 				var x = random(-600, 600);
 				var z = random(-600, 600);
-				var y = ground.getHeightAtCoordinates2(x, z) ;
+				var y = ground.getHeightAtCoordinates(x, z) ;
 				if (y>12){
 					var tree = QuickTreeGenerator(
 						20, //radius of cappella 15-20
@@ -143,13 +174,13 @@ function TestScenes() {
 			for (var i = 0; i < 300; i++) {				
 				var x = random(-600, 600);
 				var z = random(-600, 600);
-				var y = ground.getHeightAtCoordinates2(x, z) ;
+				var y = ground.getHeightAtCoordinates(x, z) ;
 				if (y>12){
 					var tree = mesh.createInstance(name+'_'+i);
 					_trees[name+'_'+i] = tree;
 					tree.position.x = x;
 					tree.position.z = z;
-					tree.position.y = y;
+					tree.position.y = y+2;
 					tree.parent = ground;
 				}
 				//tree.isPickable = true;				
@@ -161,11 +192,11 @@ function TestScenes() {
 			waterMesh.position.y=6;
 
 			var water = new BABYLON.WaterMaterial("water", scene);
-			//water.bumpTexture = new BABYLON.Texture("./images/textures/waterbump.png", scene);
+			water.bumpTexture = new BABYLON.Texture("./images/textures/waterbump.png", scene);
 			
 			// Water properties
 			water.windForce = -1;
-			water.waveHeight = 0.1;
+			water.waveHeight = 0.01;
 			water.windDirection = new BABYLON.Vector2(1, 1);
 			water.waterColor = new BABYLON.Color3(0.1, 0.1, 0.6);
 			water.colorBlendFactor = 0.3;
@@ -178,7 +209,7 @@ function TestScenes() {
 				var objs = reflect[i];
 				for (var obj in objs) {
 					if (objs.hasOwnProperty(obj)) {
-						console.info('adding reflection of ' + obj);
+						//console.info('adding reflection of ' + obj);
 						water.addToRenderList(objs[obj]);    
 					}
 				}

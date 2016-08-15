@@ -1,12 +1,14 @@
 /*SCENES*/
 var TS = require('../scenes/TestScenes');
-
+var AM = require('./AM');
 /*Scene manager*/
 function SM(hw){
 	var self = this;
+    this.am = new AM();
 	var scene = this.scene = new BABYLON.Scene(hw.engine);
     scene.fogDensity = 0.5;
     var camera = this.camera = new BABYLON.ArcRotateCamera('camera1', 0, Math.PI/3, 540, BABYLON.Vector3.Zero(), scene);
+    //var camera = new BABYLON.FreeCamera("FreeCamera", new BABYLON.Vector3(0, 0, -15), scene);
     // target the camera to scene origin
     camera.setTarget(BABYLON.Vector3.Zero());
     // attach the camera to the canvas
@@ -22,6 +24,18 @@ function SM(hw){
     		return TS[scene_name](scene, args, cb);
     	}else{
             console.error('Cant load the scene ' + scene_name );
+        }
+    }
+    this.enablePhysics = function () {
+        this.meshesColliderList = [];
+        var scene = this.scene;
+        scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), new BABYLON.OimoJSPlugin());
+        for (var i = 1; i < scene.meshes.length; i++) {
+            if (scene.meshes[i].checkCollisions && scene.meshes[i].isVisible === false) {
+                scene.meshes[i].setPhysicsState(BABYLON.PhysicsEngine.BoxImpostor, { mass: 0, 
+                                                friction: 0.5, restitution: 0.7 });
+                this.meshesColliderList.push(scene.meshes[i]);
+            }
         }
     }
 
